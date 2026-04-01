@@ -54,10 +54,11 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:3000",
+    "http://localhost:3001",
     "https://giotam.vercel.app",
     "https://giotam-re7l.vercel.app",
-    "https://giotam-frontend.vercel.app",
-    "https://giotam-mobile.vercel.app",
+    "https://giotam-frontend-xi.vercel.app",
+    "https://giotam-mobile-henna.vercel.app",
     "*" # Phòng ngừa mobile app gặp lỗi CORS khi chạy Capacitor localhost
 ]
 cors = CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
