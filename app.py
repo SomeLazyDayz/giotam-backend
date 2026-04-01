@@ -113,7 +113,7 @@ class User(db.Model):
     name = db.Column(db.String(100), nullable=False, default='')
     phone = db.Column(db.String(15), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='donor')
     address = db.Column(db.String(200), nullable=True)
     lat = db.Column(db.Float, nullable=True)
