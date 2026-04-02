@@ -224,7 +224,7 @@ class DonationRegistration(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     blood_request_id = db.Column(db.Integer, db.ForeignKey('blood_requests.id'), nullable=False)
     donor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    time_slot = db.Column(db.String(20), nullable=False)  # Ví dụ: '08:00', '09:00'
+    time_slot = db.Column(db.String(100), nullable=False)  # Khầu giờ hiến máu
     status = db.Column(db.String(20), nullable=False, default='registered')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     donor = db.relationship('User', foreign_keys=[donor_id])
@@ -1102,7 +1102,7 @@ def register_blood_donation(req_id):
         reg = DonationRegistration(
             blood_request_id=req_id,
             donor_id=donor_id,
-            time_slot=blood_req.time_slot or 'Theo thông báo của BV',
+            time_slot=blood_req.time_slot or 'Liên hệ sau',
             status='registered'
         )
         db.session.add(reg)
