@@ -1,4 +1,5 @@
 import os
+import secrets
 import smtplib  # Thư viện gửi mail
 import threading
 from email.mime.text import MIMEText
@@ -101,6 +102,11 @@ migrate = Migrate(app, db)
 SENDER_EMAIL = "minhtuandoanxxx@gmail.com"
 APP_PASSWORD = "mavn ohfr xwtz cvgg"
 
+# URL frontend (dùng trong link email ẩn danh)
+FRONTEND_BASE_URL = os.environ.get('FRONTEND_URL', 'https://giotam.vercel.app')
+# URL backend (dùng cho link /set_anonymous)
+BACKEND_BASE_URL = os.environ.get('BACKEND_URL', 'https://arletta-unfavoured-immemorially.ngrok-free.dev')
+
 # URL công khai của server (ngrok hoặc IP thực).
 # Thay đổi dòng này thành ngrok URL của bạn khi dùng điện thoại thực.
 BASE_URL = "https://arletta-unfavoured-immemorially.ngrok-free.dev"  # ngrok URL của bạn
@@ -170,6 +176,8 @@ class DonationRecord(db.Model):
     amount_ml = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), default='completed')
     donation_type = db.Column(db.String(50), nullable=True) # Loại hiến (Toàn phần, Tiểu cầu, v.v.)
+    is_anonymous = db.Column(db.Boolean, default=False, nullable=False)  # True = ẩn danh trên FB
+    anonymous_token = db.Column(db.String(64), nullable=True)  # Token xác thực link email
 
     def to_dict(self):
         return {
@@ -178,7 +186,8 @@ class DonationRecord(db.Model):
             'donation_date': self.donation_date.isoformat() if self.donation_date else None,
             'amount_ml': self.amount_ml,
             'status': self.status,
-            'donation_type': self.donation_type
+            'donation_type': self.donation_type,
+            'is_anonymous': self.is_anonymous
         }
 
 class BloodRequest(db.Model):
@@ -255,7 +264,149 @@ class PushToken(db.Model):
         return f'<PushToken user={self.user_id}>'
 
 
+
+# --- HÀM GỬI EMAIL CẢM ƠN SAU HIẾN MÁU ---
+def send_thank_you_email(user_email: str, user_name: str, record_id: int, token: str):
+    """Gửi email cảm ơn tình nguyện viên sau khi bệnh viện xác nhận hoàn tất.
+    Chạy trong background thread để không block response."""
+    with app.app_context():
+        try:
+            anonymous_link = f"{BACKEND_BASE_URL}/set_anonymous?record_id={record_id}&token={token}"
+            
+            html_body = f"""
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f9f5f0; margin: 0; padding: 0; }}
+    .wrapper {{ max-width: 600px; margin: 40px auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }}
+    .header {{ background: linear-gradient(135deg, #930511, #c0392b); padding: 40px 32px; text-align: center; }}
+    .header h1 {{ color: #fff; margin: 0; font-size: 26px; letter-spacing: 1px; }}
+    .header p {{ color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px; }}
+    .body {{ padding: 36px 32px; color: #333; line-height: 1.7; }}
+    .body h2 {{ color: #930511; font-size: 20px; margin-bottom: 8px; }}
+    .body p {{ margin: 0 0 16px; }}
+    .divider {{ border: none; border-top: 2px dashed #f0d6d6; margin: 28px 0; }}
+    .notice-box {{ background: #fff8f0; border-left: 4px solid #e67e22; border-radius: 8px; padding: 20px 24px; margin: 24px 0; }}
+    .notice-box p {{ margin: 0 0 8px; font-size: 15px; }}
+    .btn-anon {{ display: inline-block; margin-top: 16px; background: #930511; color: #fff !important; text-decoration: none; padding: 14px 32px; border-radius: 50px; font-weight: bold; font-size: 16px; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(147,5,17,0.3); }}
+    .btn-anon:hover {{ background: #7a0410; }}
+    .footer {{ background: #f2f2f2; text-align: center; padding: 20px; font-size: 12px; color: #999; }}
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h1>🩸 Giọt Ấm</h1>
+      <p>Kết nối yêu thương — Lan tỏa sự sống</p>
+    </div>
+    <div class="body">
+      <h2>Cảm ơn bạn, {user_name}! 💙</h2>
+      <p>
+        Thay mặt đội ngũ <strong>Dự Án Giọt Ấm</strong> và <strong>Bệnh viện Đà Nẵng</strong>,
+        chúng tôi xin gửi đến bạn lời cảm ơn chân thành và sâu sắc nhất vì đã dành thời gian 
+        đến hiến máu hôm nay.
+      </p>
+      <p>
+        Món quà của bạn — những giọt máu quý giá — có thể trực tiếp cứu sống một mạng người. 
+        Đây là hành động đẹp đẽ và ý nghĩa mà không phải ai cũng dám làm. Chúng tôi thật sự 
+        rất biết ơn sự đóng góp của bạn cho cộng đồng.
+      </p>
+      <p>
+        Bạn sẽ nhận được <strong>giấy chứng nhận tình nguyện hiến máu</strong> từ Bệnh viện Đà Nẵng 
+        trong thời gian sớm nhất.
+      </p>
+
+      <hr class="divider" />
+
+      <div class="notice-box">
+        <p><strong>📢 Thông báo về bài đăng Facebook</strong></p>
+        <p>
+          Chúng tôi sẽ đăng lời tri ân kèm giấy chứng nhận lên nhóm Facebook
+          <strong>"Dự Án Giọt Ấm"</strong> với <strong>tên thật của bạn</strong>.
+        </p>
+        <p>
+          Nếu bạn <strong>không muốn công khai tên thật</strong>, hãy nhấn nút bên dưới —
+          chúng tôi sẽ chỉ hiển thị mã tình nguyện viên của bạn.
+          Nếu bạn không nhấn, chúng tôi hiểu rằng bạn đồng ý công khai tên. 🙏
+        </p>
+        <a href="{anonymous_link}" class="btn-anon">🔒 Tôi muốn ẩn danh</a>
+      </div>
+
+      <p style="font-size:13px; color:#999; margin-top:24px;">
+        (Bạn có thể nhấn nút bất cứ lúc nào, link không có thời hạn.)
+      </p>
+    </div>
+    <div class="footer">
+      © 2026 Giọt Ấm · Bệnh viện Đà Nẵng · 124 Hải Phòng, Đà Nẵng<br/>
+      Email này được gửi tự động, vui lòng không trả lời.
+    </div>
+  </div>
+</body>
+</html>
+"""
+            msg = MIMEMultipart('alternative')
+            msg['From'] = SENDER_EMAIL
+            msg['To'] = user_email
+            msg['Subject'] = f'🩸 Cảm ơn bạn đã hiến máu, {user_name}! — Giọt Ấm'
+
+            msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=15) as server:
+                server.login(SENDER_EMAIL, APP_PASSWORD)
+                server.sendmail(SENDER_EMAIL, user_email, msg.as_string())
+            print(f"✅ Gửi email cảm ơn thành công → {user_email}")
+        except Exception as e:
+            print(f"⚠️ Lỗi gửi email cảm ơn tới {user_email}: {e}")
+
+
+# --- ROUTE: NHẬN PHẢN HỒI ẨN DANH QUA LINK EMAIL ---
+@app.route('/set_anonymous', methods=['GET'])
+def set_anonymous():
+    """Tình nguyện viên bấm link trong email để chọn ẩn danh trên Facebook."""
+    record_id = request.args.get('record_id', type=int)
+    token = request.args.get('token', '')
+
+    if not record_id or not token:
+        return "<h2 style='font-family:Arial;color:#930511'>❌ Link không hợp lệ.</h2>", 400
+
+    record = db.session.get(DonationRecord, record_id)
+    if not record or not record.anonymous_token or record.anonymous_token != token:
+        return "<h2 style='font-family:Arial;color:#930511'>❌ Link không hợp lệ hoặc đã được xử lý.</h2>", 400
+
+    try:
+        record.is_anonymous = True
+        db.session.commit()
+        return """
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>body{{font-family:'Segoe UI',Arial,sans-serif;background:#f9f5f0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}}
+.card{{background:#fff;border-radius:20px;padding:48px 40px;text-align:center;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,0.1)}}
+h2{{color:#2d7a2d;font-size:22px;margin-bottom:12px}}p{{color:#555;line-height:1.6}}
+.badge{{display:inline-block;background:#e8f5e9;color:#2d7a2d;border-radius:50px;padding:8px 24px;font-weight:bold;margin-top:20px;font-size:15px}}</style>
+</head>
+<body>
+  <div class="card">
+    <div style="font-size:56px;margin-bottom:16px">✅</div>
+    <h2>Đã ghi nhận yêu cầu!</h2>
+    <p>Chúng tôi sẽ chỉ hiển thị <strong>mã tình nguyện viên</strong> của bạn thay vì tên thật trên bài đăng Facebook.</p>
+    <p>Cảm ơn bạn đã tin tưởng và đồng hành cùng <strong>Dự Án Giọt Ấm</strong>! 💙</p>
+    <div class="badge">🔒 Ẩn danh đã được kích hoạt</div>
+  </div>
+</body>
+</html>
+""", 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Lỗi set_anonymous: {e}")
+        return "<h2 style='font-family:Arial;color:#930511'>❌ Lỗi hệ thống, vui lòng thử lại.</h2>", 500
+
+
 # --- CÁC API ROUTE CƠ BẢN ---
+
 @app.route('/')
 def index():
     return jsonify({'message': 'Blood Donation API is running!'})
@@ -1194,6 +1345,19 @@ def confirm_donation(record_id):
         
         db.session.commit()
         
+        # 4. Gửi email cảm ơn + link ẩn danh (background thread)
+        token = secrets.token_urlsafe(32)
+        record.anonymous_token = token
+        db.session.commit()
+        
+        if user.email:
+            t = threading.Thread(
+                target=send_thank_you_email,
+                args=(user.email, user.name, record.id, token),
+                daemon=True
+            )
+            t.start()
+        
         return jsonify({
             'message': 'Xác nhận hiến máu thành công',
             'record': record.to_dict(),
@@ -1324,6 +1488,19 @@ def confirm_scheduled_donation(reg_id):
         user.reward_points += 10
         
         db.session.commit()
+        
+        # Gửi email cảm ơn + link ẩn danh (background thread)
+        token = secrets.token_urlsafe(32)
+        new_record.anonymous_token = token
+        db.session.commit()
+        
+        if user.email:
+            t = threading.Thread(
+                target=send_thank_you_email,
+                args=(user.email, user.name, new_record.id, token),
+                daemon=True
+            )
+            t.start()
         
         return jsonify({
             'message': 'Xác nhận hiến máu thành công',
@@ -1468,6 +1645,7 @@ def admin_donors_list():
                 'donations_count': len(records),
                 'total_ml': total_ml,
                 'last_donated': last_date_str,
+                'is_anonymous': records[0].is_anonymous if records else False,  # Lấy từ lần hiến gần nhất
                 'status': {
                     'eligible': is_eligible,
                     'reason': reason,
