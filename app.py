@@ -105,7 +105,7 @@ APP_PASSWORD = "mavn ohfr xwtz cvgg"
 # URL frontend (dùng trong link email ẩn danh)
 FRONTEND_BASE_URL = os.environ.get('FRONTEND_URL', 'https://giotam.vercel.app')
 # URL backend (dùng cho link /set_anonymous)
-BACKEND_BASE_URL = os.environ.get('BACKEND_URL', 'https://arletta-unfavoured-immemorially.ngrok-free.dev')
+BACKEND_BASE_URL = os.environ.get('BACKEND_URL', 'https://giotam-backend.onrender.com')
 
 # URL công khai của server (ngrok hoặc IP thực).
 # Thay đổi dòng này thành ngrok URL của bạn khi dùng điện thoại thực.
