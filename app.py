@@ -176,7 +176,7 @@ class DonationRecord(db.Model):
     amount_ml = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), default='completed')
     donation_type = db.Column(db.String(50), nullable=True) # Loại hiến (Toàn phần, Tiểu cầu, v.v.)
-    is_anonymous = db.Column(db.Boolean, default=False, nullable=False)  # True = ẩn danh trên FB
+    is_anonymous = db.Column(db.Boolean, default=False, nullable=True, server_default='false')  # True = ẩn danh trên FB
     anonymous_token = db.Column(db.String(64), nullable=True)  # Token xác thực link email
 
     def to_dict(self):
