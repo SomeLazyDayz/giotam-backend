@@ -176,7 +176,7 @@ class DonationRecord(db.Model):
     amount_ml = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), default='completed')
     donation_type = db.Column(db.String(50), nullable=True) # Loại hiến (Toàn phần, Tiểu cầu, v.v.)
-    is_anonymous = db.Column(db.Boolean, default=False, nullable=True, server_default='false')  # True = ẩn danh trên FB
+    is_anonymous = db.Column(db.Boolean, default=False, nullable=False)  # True = ẩn danh trên FB
     anonymous_token = db.Column(db.String(64), nullable=True)  # Token xác thực link email
 
     def to_dict(self):
@@ -379,76 +379,30 @@ def set_anonymous():
     try:
         record.is_anonymous = True
         db.session.commit()
-        success_html = (
-            '<!DOCTYPE html>'
-            '<html lang="vi">'
-            '<head>'
-            '<meta charset="UTF-8"/>'
-            '<meta name="viewport" content="width=device-width,initial-scale=1"/>'
-            '<title>Giot Am - Da ghi nhan an danh</title>'
-            '</head>'
-            '<body style="font-family:Segoe UI,Arial,sans-serif;background:#FBF2E1;'
-            'min-height:100vh;display:flex;flex-direction:column;align-items:center;'
-            'justify-content:center;padding:24px;margin:0;">'
-            '<div style="width:100%;max-width:480px;">'
-
-            # Header
-            '<div style="background:linear-gradient(135deg,#930511,#c0392b);'
-            'border-radius:20px 20px 0 0;padding:32px 24px;text-align:center;">'
-            '<div style="font-size:36px;margin-bottom:8px;">&#128142;</div>'
-            '<h1 style="color:#fff;font-size:22px;font-weight:800;margin:0;letter-spacing:1px;">Gi&#7885;t &#7844;m</h1>'
-            '<p style="color:rgba(255,255,255,0.85);font-size:13px;margin:6px 0 0;">K&#7871;t n&#7889;i y&#234;u th&#432;&#417;ng &#8212; Lan t&#7887;a s&#7921; s&#7889;ng</p>'
-            '</div>'
-
-            # Card
-            '<div style="background:#fff;border-radius:0 0 20px 20px;padding:40px 32px;'
-            'text-align:center;box-shadow:0 12px 40px rgba(147,5,17,0.15);">'
-
-            # Icon circle
-            '<div style="width:80px;height:80px;background:linear-gradient(135deg,#930511,#e74c3c);'
-            'border-radius:50%;display:flex;align-items:center;justify-content:center;'
-            'margin:0 auto 24px;box-shadow:0 6px 20px rgba(147,5,17,0.35);font-size:38px;">&#10003;</div>'
-
-            '<h2 style="color:#930511;font-size:22px;font-weight:800;margin:0 0 14px;">&#272;&#227; ghi nh&#7853;n y&#234;u c&#7847;u!</h2>'
-            '<p style="color:#555;font-size:15px;line-height:1.7;margin:0 0 8px;">'
-            'Tr&#234;n b&#224;i &#273;&#259;ng Facebook c&#7911;a nh&#243;m <strong style="color:#222;">D&#7921; &#193;n Gi&#7885;t &#7844;m</strong>, '
-            'ch&#250;ng t&#244;i s&#7869; ch&#7881; hi&#7875;n th&#7883; <strong style="color:#930511;">m&#227; t&#236;nh nguy&#7879;n vi&#234;n</strong> '
-            'thay v&#236; t&#234;n th&#7853;t c&#7911;a b&#7841;n.</p>'
-
-            '<hr style="border:none;border-top:2px dashed #f0d6d6;margin:22px 0;"/>'
-
-            '<p style="color:#555;font-size:15px;line-height:1.7;margin:0 0 20px;">'
-            'C&#7843;m &#417;n b&#7841;n &#273;&#227; tin t&#432;&#7903;ng v&#224; &#273;&#7891;ng h&#224;nh c&#249;ng ch&#250;ng t&#244;i. '
-            'H&#224;nh &#273;&#7897;ng c&#7911;a b&#7841;n h&#244;m nay th&#7853;t s&#7921; r&#7845;t c&#243; &#253; ngh&#297;a! &#128153;</p>'
-
-            '<div style="display:inline-flex;align-items:center;gap:8px;background:#fff0f0;'
-            'border:2px solid #f5c6c6;color:#930511;font-weight:700;font-size:14px;'
-            'padding:10px 24px;border-radius:50px;">&#128274; &#7848;n danh &#273;&#227; &#273;&#432;&#7907;c k&#237;ch ho&#7841;t</div>'
-
-            '<p style="margin-top:24px;font-size:12px;color:#bbb;line-height:1.6;">'
-            'B&#7879;nh vi&#7879;n &#272;&#224; N&#7861;ng &middot; 124 H&#7843;i Ph&#242;ng, Th&#7841;ch Thang, H&#7843;i Ch&#226;u, &#272;&#224; N&#7861;ng<br/>'
-            '&copy; 2026 D&#7921; &#193;n Gi&#7885;t &#7844;m</p>'
-
-            '</div>'  # end card
-            '</div>'  # end wrapper
-            '</body></html>'
-        )
-        return success_html, 200, {'Content-Type': 'text/html; charset=utf-8'}
+        return """
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>body{{font-family:'Segoe UI',Arial,sans-serif;background:#f9f5f0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}}
+.card{{background:#fff;border-radius:20px;padding:48px 40px;text-align:center;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,0.1)}}
+h2{{color:#2d7a2d;font-size:22px;margin-bottom:12px}}p{{color:#555;line-height:1.6}}
+.badge{{display:inline-block;background:#e8f5e9;color:#2d7a2d;border-radius:50px;padding:8px 24px;font-weight:bold;margin-top:20px;font-size:15px}}</style>
+</head>
+<body>
+  <div class="card">
+    <div style="font-size:56px;margin-bottom:16px">✅</div>
+    <h2>Đã ghi nhận yêu cầu!</h2>
+    <p>Chúng tôi sẽ chỉ hiển thị <strong>mã tình nguyện viên</strong> của bạn thay vì tên thật trên bài đăng Facebook.</p>
+    <p>Cảm ơn bạn đã tin tưởng và đồng hành cùng <strong>Dự Án Giọt Ấm</strong>! 💙</p>
+    <div class="badge">🔒 Ẩn danh đã được kích hoạt</div>
+  </div>
+</body>
+</html>
+""", 200
     except Exception as e:
         db.session.rollback()
         print(f"Lỗi set_anonymous: {e}")
-        error_html = (
-            '<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/></head>'
-            '<body style="font-family:Segoe UI,Arial,sans-serif;background:#FBF2E1;'
-            'display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">'
-            '<div style="background:#fff;border-radius:20px;padding:40px 32px;text-align:center;'
-            'max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.1);">'
-            '<div style="font-size:48px;margin-bottom:16px;">&#10060;</div>'
-            '<h2 style="color:#930511;margin-bottom:12px;">L&#7895;i h&#7879; th&#7889;ng</h2>'
-            '<p style="color:#666;">Vui l&#242;ng th&#7917; l&#7841;i sau.</p>'
-            '</div></body></html>'
-        )
-        return error_html, 500, {'Content-Type': 'text/html; charset=utf-8'}
+        return "<h2 style='font-family:Arial;color:#930511'>❌ Lỗi hệ thống, vui lòng thử lại.</h2>", 500
 
 
 # --- CÁC API ROUTE CƠ BẢN ---
